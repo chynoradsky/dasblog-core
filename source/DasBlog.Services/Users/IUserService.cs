@@ -18,6 +18,6 @@ namespace DasBlog.Services.Users
 		bool HasUsers();
 		(bool userFound, User user) FindMatchingUser(string email);
 		bool DeleteUser(string email);
-		void AddOrReplaceUser(User user, string originalEmail);
+		void AddOrReplaceUser(User user, string originalEmail, List<User> users);
 	}
 }

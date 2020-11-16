@@ -10,6 +10,13 @@ namespace DasBlog.Web.TagHelpers.Comments
 {
 	public class CommentContentTagHelper : TagHelper
 	{
+		public CommentContentTagHelper(){}
+
+		public CommentContentTagHelper(CommentViewModel comment)
+		{
+			Comment = comment;
+		}
+
 		public CommentViewModel Comment { get; set; }
 
 		public override void Process(TagHelperContext context, TagHelperOutput output)

@@ -68,13 +68,9 @@ namespace DasBlog.Services.Users
 		/// <param name="originalEmail">if the user is to be added then this will be an empty string
 		/// otherwise the original email address can be used to locate the user that has been modified.
 		/// This covers the case where the user's email address itself has been mdofied</param>
-		public void AddOrReplaceUser(User user, string originalEmail, List<User> users = null)
+		public void AddOrReplaceUser(User user, string originalEmail)
 		{
-			if(users == null)
-			{
-				users = userRepo.LoadUsers().ToList();
-			}
-
+			var users = userRepo.LoadUsers().ToList();
 			var index = users.FindIndex(u => u.EmailAddress == originalEmail);
 			if (index == -1)
 			{
@@ -85,7 +81,7 @@ namespace DasBlog.Services.Users
 				users[index] = user;
 			}
 
-			siteSecurityFileService.SaveConfig(new SiteSecurityConfigData(){ Users = users});
+			siteSecurityFileService.SaveConfig(new SiteSecurityConfigData() { Users = users });
 		}
 	}
 }

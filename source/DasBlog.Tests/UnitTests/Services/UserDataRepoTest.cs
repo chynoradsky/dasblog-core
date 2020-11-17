@@ -8,6 +8,9 @@ using DasBlog.Services.Users;
 using DasBlog.Services.FileManagement;
 using DasBlog.Services.ConfigFile;
 using DasBlog.Services.FileManagement.Interfaces;
+using Moq;
+using Autofac.Extras.Moq;
+using System;
 
 namespace DasBlog.Tests.UnitTests.Services
 {
@@ -27,48 +30,105 @@ namespace DasBlog.Tests.UnitTests.Services
 
 		[Fact]
 		[Trait("Category", "UnitTest")]
-		public void UserShouldBeDeleted()
+		public void HasUsers_ReturnsCorrectValue()
 		{
-			var userRepo = new UserDataRepo(new OptionsAccessor<ConfigFilePathsDataOption>());
-			IConfigFileService<SiteSecurityConfigData> securityFileService = new SiteSecurityConfigFileService(new OptionsAccessor<ConfigFilePathsDataOption>());
-			var userDataRepo = new UserDataRepo(new OptionsAccessor<ConfigFilePathsDataOption>());
-
-			var userService = new UserService(userRepo, securityFileService);
-			var users = new List<User>() { 
+			var users = new List<User>()
+			{
 				new User(){DisplayName = "Janko"},
 				new User(){DisplayName = "Ferko"},
 				new User(){DisplayName = "Branko"}
 			};
 
-			var user = new User()
+			using (var mock = AutoMock.GetLoose())
 			{
-				DisplayName = "Peter"
-			};
+				mock.Mock<IUserDataRepo>().Setup(u => u.LoadUsers()).Returns(users);
 
-			userService.AddOrReplaceUser(user, "somemeamil@gmail.com", users);
-
-			Assert.True(userService.HasUsers()); 
+				var userService = mock.Create<UserService>();
+				Assert.True(userService.HasUsers());
+			}
 		}
 
-		//public bool DeleteUser(string email)
-		//{
-		//	var users = userRepo.LoadUsers().ToList();
-		//	var userToDelete = users.FirstOrDefault(user => user.EmailAddress == email);
-		//	if (users.Remove(userToDelete))
-		//	{
-		//		siteSecurityFileService.SaveConfig(new SiteSecurityConfigData() { Users = users });
-		//		return true;
-		//	}
-		//	else
-		//	{
-		//		return false;   // no user with that email address
-		//	}
-		//}
+		[Theory]
+		[InlineData("janko@gmail.com")]
+		[InlineData("Matko@niecoine.com")]
+		[InlineData("Simon@centrum.com")]
+		[Trait("Category", "UnitTest")]
+		public void FindMatchingUser_ReturnsCorrectValue(string userEmail)
+		{
+			var users = getUsers();
 
-	}
+			using (var mock = AutoMock.GetLoose())
+			{
+				mock.Mock<IUserDataRepo>().Setup(u => u.LoadUsers()).Returns(users);
 
-	public class OptionsAccessor<T> : IOptions<T> where T : class, new()
-	{
-		public T Value { get; set; }
+				var userService = mock.Create<UserService>();
+
+				(bool userFound, User user) result = userService.FindMatchingUser(userEmail);
+
+				Assert.True(result.userFound);
+				Assert.Equal(result.user.EmailAddress, userEmail);
+			}
+		}
+
+		[Theory]
+		[InlineData("janko@gmail.com")]
+		[InlineData("Matko@niecoine.com")]
+		[InlineData("Simon@centrum.com")]
+		[Trait("Category", "UnitTest")]
+		public void DeleteUser_UserIsDeleted(string userEmail)
+		{
+			var users = getUsers();
+
+			using (var mock = AutoMock.GetLoose())
+			{
+				mock.Mock<IUserDataRepo>().Setup(u => u.LoadUsers()).Returns(users);
+				mock.Mock<IConfigFileService<SiteSecurityConfigData>>().
+					Setup(x => x.SaveConfig(new SiteSecurityConfigData() { Users = users }));
+
+				var userService = mock.Create<UserService>();
+
+				Assert.True(userService.DeleteUser(userEmail));
+			}
+		}
+
+		[Theory]
+		[InlineData("Misko@gmail.com")]
+		[InlineData("Kubko@niecoine.com")]
+		[InlineData("Marek@centrum.com")]
+		[Trait("Category", "UnitTest")]
+		public void DeleteUser_UserNotFound(string userEmail)
+		{
+			var users = getUsers();
+
+			using (var mock = AutoMock.GetLoose())
+			{
+				mock.Mock<IUserDataRepo>().Setup(u => u.LoadUsers()).Returns(users);
+				mock.Mock<IConfigFileService<SiteSecurityConfigData>>().
+					Setup(x => x.SaveConfig(new SiteSecurityConfigData() { Users = users }));
+
+				var userService = mock.Create<UserService>();
+
+				Assert.False(userService.DeleteUser(userEmail));
+			}
+		}
+
+		public List<User> getUsers()
+		{
+			var users = new List<User>()
+			{
+				new User(){DisplayName = "Janko", EmailAddress = "janko@gmail.com"},
+				new User(){DisplayName = "Ferko", EmailAddress = "ferko@centrum.com"},
+				new User(){DisplayName = "Branko", EmailAddress = "branko@niecoine.com"},
+				new User(){DisplayName = "Matko", EmailAddress = "Matko@niecoine.com"},
+				new User(){DisplayName = "Simon", EmailAddress = "Simon@centrum.com"}
+			};
+
+			return users;
+		}
+
+		public class OptionsAccessor<T> : IOptions<T> where T : class, new()
+		{
+			public T Value { get; set; }
+		}
 	}
 }
